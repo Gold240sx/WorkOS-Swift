@@ -497,7 +497,7 @@ http.route({
 
 ## Changelog
 
-### 0.1.0 (Initial Release)
+### 1.0.0 (Initial Release)
 
 - OAuth 2.0 PKCE authentication flow
 - ASWebAuthenticationSession integration
