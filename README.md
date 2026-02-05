@@ -4,6 +4,8 @@
 
 A Swift package for [WorkOS](https://workos.com) AuthKit/User Management authentication in iOS and macOS apps (OAuth 2.0 PKCE via `ASWebAuthenticationSession`), with no external dependencies.
 
+This package is **backend-agnostic**. If you use a backend to verify tokens, load organizations, or exchange org-scoped sessions, it can be anything (your own API, serverless functions, etc.). For example, you *can* implement these endpoints using **Convex HTTP Actions**, but Convex is not required.
+
 ## Overview
 
 WorkOSAuthKitSwift brings WorkOS authentication to native Swift apps. Since WorkOS doesn't provide an official Swift SDK, this package implements the complete OAuth 2.0 PKCE flow with enterprise features like multi-organization support, RBAC, and biometric unlock.
@@ -149,7 +151,8 @@ let config = WorkOSConfiguration(
     clientId: "client_01ABC...",
     redirectUri: "myapp://callback",
 
-    // Optional: Custom backend for token verification
+    // Optional: Your backend (any stack) for token verification and org-scoped session exchange.
+    // Example backends: your own API, serverless functions, or Convex HTTP Actions.
     backendUrl: "https://api.yourapp.com",
 
     // Optional: Custom WorkOS endpoints (rarely needed)
