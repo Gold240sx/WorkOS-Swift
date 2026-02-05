@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source srcset="https://utfs.io/f/8fef9f6b-af02-42c2-8e1f-a31fe685ae03-wc6ubf.svg" type="image/svg+xml" />
+    <img src="https://utfs.io/f/bd3d5cad-5e86-42c4-9d22-cd5e4d7e6792-wc6ubf.png" alt="WorkOS-Swift" width="160" />
+  </picture>
+</p>
+
 # WorkOS-Swift (WorkOSAuthKitSwift)
 
 **Version 1.0.0**
