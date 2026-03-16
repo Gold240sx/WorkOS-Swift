@@ -1,5 +1,10 @@
 import Foundation
 import SwiftUI
+#if canImport(AppKit)
+import AppKit
+#elseif canImport(UIKit)
+import UIKit
+#endif
 
 /// WorkOSAuthKitSwift - Enterprise authentication for Swift apps.
 ///
@@ -72,13 +77,15 @@ public final class WorkOSAuthKit: Sendable {
         clientId: String,
         redirectUri: String,
         backendUrl: String? = nil,
-        debugLogging: Bool = false
+        debugLogging: Bool = false,
+        maxOfflineDuration: OfflineSessionDuration = .days(7)
     ) {
         let config = WorkOSConfiguration(
             clientId: clientId,
             redirectUri: redirectUri,
             backendUrl: backendUrl,
-            debugLogging: debugLogging
+            debugLogging: debugLogging,
+            maxOfflineDuration: maxOfflineDuration
         )
         shared = WorkOSAuthKit(configuration: config)
     }
@@ -106,17 +113,31 @@ extension View {
     }
 }
 
+// MARK: - Embedded Auth Session
+
+/// Holds the PKCE state needed to complete an embedded (WKWebView) OAuth flow.
+public struct EmbeddedAuthSession: Sendable {
+    public let pkce: PKCE
+    public let state: String
+    public let callbackScheme: String
+}
+
 // MARK: - Login View
 
 /// Pre-built login view.
 public struct WorkOSLoginView: View {
     @EnvironmentObject var auth: AuthStore
     @Environment(\.adminTheme) var theme
+    @Environment(\.colorScheme) var colorScheme
 
+    private let forceAccountSelection: Bool
     @State private var isLoading = false
+    @State private var isUnlocking = false
     @State private var error: String?
 
-    public init() {}
+    public init(forceAccountSelection: Bool = false) {
+        self.forceAccountSelection = forceAccountSelection
+    }
 
     public var body: some View {
         VStack(spacing: theme.spacing * 2) {
@@ -130,9 +151,10 @@ public struct WorkOSLoginView: View {
             Text("Welcome")
                 .font(.largeTitle)
                 .fontWeight(.bold)
+                .foregroundStyle(.primary)
 
             Text("Sign in to continue")
-                .foregroundColor(theme.secondaryTextColor)
+                .foregroundStyle(.secondary)
 
             Spacer()
 
@@ -140,6 +162,27 @@ public struct WorkOSLoginView: View {
                 Text(error)
                     .foregroundColor(theme.destructiveColor)
                     .font(.caption)
+            }
+
+            if auth.canUseBiometricUnlock {
+                Button {
+                    Task { await unlock() }
+                } label: {
+                    HStack {
+                        if isUnlocking {
+                            ProgressView()
+                                .tint(theme.primaryColor)
+                        } else {
+                            Label("Unlock with Biometrics", systemImage: "faceid")
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(theme.surfaceColor)
+                    .foregroundColor(theme.primaryColor)
+                    .cornerRadius(theme.cornerRadius)
+                }
+                .disabled(isLoading || isUnlocking)
             }
 
             Button {
@@ -159,12 +202,23 @@ public struct WorkOSLoginView: View {
                 .foregroundColor(.white)
                 .cornerRadius(theme.cornerRadius)
             }
-            .disabled(isLoading)
+            .disabled(isLoading || isUnlocking)
 
             Spacer()
                 .frame(height: theme.spacing * 2)
         }
         .padding(theme.spacing * 2)
+        .background(adaptiveBackground)
+    }
+
+    private var adaptiveBackground: Color {
+        #if canImport(AppKit)
+        return Color(nsColor: .windowBackgroundColor)
+        #elseif canImport(UIKit)
+        return Color(uiColor: .systemBackground)
+        #else
+        return colorScheme == .dark ? Color(white: 0.12) : Color(white: 0.97)
+        #endif
     }
 
     private func signIn() async {
@@ -172,7 +226,7 @@ public struct WorkOSLoginView: View {
         error = nil
 
         do {
-            try await auth.signIn()
+            try await auth.signIn(forceAccountSelection: forceAccountSelection)
         } catch AuthError.userCancelled {
             // User cancelled, do nothing
         } catch {
@@ -180,6 +234,19 @@ public struct WorkOSLoginView: View {
         }
 
         isLoading = false
+    }
+
+    private func unlock() async {
+        isUnlocking = true
+        error = nil
+
+        do {
+            try await auth.unlockWithBiometrics()
+        } catch {
+            self.error = error.localizedDescription
+        }
+
+        isUnlocking = false
     }
 }
 

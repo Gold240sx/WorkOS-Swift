@@ -71,6 +71,7 @@ final class WorkOSAuthKitSwiftTests: XCTestCase {
 
         XCTAssertTrue(permissions.contains(.membersRead))
         XCTAssertFalse(permissions.contains(.billingManage))
+        XCTAssertEqual(Permission(rawValue: "codebase:deploy").displayName, "Codebase Deploy")
     }
 
     func testOrganizationCreation() {
@@ -95,5 +96,26 @@ final class WorkOSAuthKitSwiftTests: XCTestCase {
         XCTAssertEqual(session.orgId, "org_123")
         XCTAssertEqual(session.role, "admin")
         XCTAssertTrue(session.permissions.contains(.membersRead))
+    }
+
+    func testAuthorizationSnapshot() {
+        let org = Organization(id: "org_123", workosOrgId: "org_123", name: "DevSpace")
+        let resource = AuthorizationResource(id: "res_123", externalId: "proj-1", typeSlug: "project", name: "Project One")
+        let session = OrgSession(
+            orgId: org.id,
+            workosOrganizationId: org.workosOrgId,
+            organizationMembershipId: "om_123",
+            role: "owner",
+            permissions: [.orgManage],
+            organizationRoles: ["owner"],
+            selectedResource: resource,
+            accessibleResources: [resource],
+            resourcePermissions: [resource.id: [.projectsRead, .projectsUpdate]]
+        )
+
+        let snapshot = AuthorizationSnapshot(organizations: [org], activeOrgSession: session)
+        XCTAssertEqual(snapshot.organizations.first?.name, "DevSpace")
+        XCTAssertEqual(snapshot.activeOrgSession?.selectedResource?.id, "res_123")
+        XCTAssertTrue(snapshot.activeOrgSession?.permissions(for: resource).contains(.projectsUpdate) == true)
     }
 }

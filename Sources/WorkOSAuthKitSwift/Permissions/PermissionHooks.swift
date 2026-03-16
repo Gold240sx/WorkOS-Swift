@@ -7,19 +7,23 @@ extension AuthStore {
 
     /// Check if user has a specific permission in the active org.
     public func has(_ permission: Permission) -> Bool {
-        activeOrgSession?.permissions.contains(permission) == true
+        has(permission, in: activeOrgSession?.selectedResource)
+    }
+
+    /// Check if user has a specific permission in a resource context.
+    public func has(_ permission: Permission, in resource: AuthorizationResource?) -> Bool {
+        guard let session = activeOrgSession else { return false }
+        return session.permissions(for: resource).contains(permission)
     }
 
     /// Check if user has any of the specified permissions.
     public func hasAny(_ permissions: Permission...) -> Bool {
-        guard let session = activeOrgSession else { return false }
-        return permissions.contains { session.permissions.contains($0) }
+        permissions.contains { has($0) }
     }
 
     /// Check if user has all of the specified permissions.
     public func hasAll(_ permissions: Permission...) -> Bool {
-        guard let session = activeOrgSession else { return false }
-        return permissions.allSatisfy { session.permissions.contains($0) }
+        permissions.allSatisfy { has($0) }
     }
 
     /// Require a permission, throwing if not present.
@@ -42,13 +46,13 @@ extension AuthStore {
 
     /// Check if user has a specific role.
     public func hasRole(_ role: String) -> Bool {
-        activeOrgSession?.role == role
+        guard let session = activeOrgSession else { return false }
+        return session.role == role || session.organizationRoles.contains(role)
     }
 
     /// Check if user has any of the specified roles.
     public func hasAnyRole(_ roles: String...) -> Bool {
-        guard let currentRole = activeOrgSession?.role else { return false }
-        return roles.contains(currentRole)
+        roles.contains { hasRole($0) }
     }
 
     // MARK: - Convenience Properties

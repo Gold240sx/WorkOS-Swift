@@ -80,7 +80,12 @@ public struct WorkOSConfiguration: Sendable {
     }
 
     /// Build the authorization URL for OAuth flow.
-    public func authorizationUrl(pkce: PKCE, state: String? = nil) -> URL? {
+    public func authorizationUrl(
+        pkce: PKCE,
+        state: String? = nil,
+        prompt: String? = nil,
+        maxAge: Int? = nil
+    ) -> URL? {
         var components = URLComponents(string: "\(apiBaseUrl)/user_management/authorize")
 
         var queryItems = [
@@ -96,6 +101,14 @@ public struct WorkOSConfiguration: Sendable {
             queryItems.append(URLQueryItem(name: "state", value: state))
         }
 
+        if let prompt, !prompt.isEmpty {
+            queryItems.append(URLQueryItem(name: "prompt", value: prompt))
+        }
+
+        if let maxAge {
+            queryItems.append(URLQueryItem(name: "max_age", value: String(maxAge)))
+        }
+
         components?.queryItems = queryItems
         return components?.url
     }
@@ -108,5 +121,22 @@ public struct WorkOSConfiguration: Sendable {
     /// Build the user info endpoint URL.
     public var userInfoUrl: URL? {
         URL(string: "\(apiBaseUrl)/user_management/userinfo")
+    }
+
+    /// Build a URL for the app-owned RBAC service boundary.
+    public func rbacServiceURL(
+        path: String,
+        queryItems: [URLQueryItem] = []
+    ) -> URL? {
+        guard let backendUrl, !backendUrl.isEmpty else {
+            return nil
+        }
+
+        let normalizedBase = backendUrl.hasSuffix("/") ? String(backendUrl.dropLast()) : backendUrl
+        var components = URLComponents(string: "\(normalizedBase)\(path)")
+        if !queryItems.isEmpty {
+            components?.queryItems = queryItems
+        }
+        return components?.url
     }
 }

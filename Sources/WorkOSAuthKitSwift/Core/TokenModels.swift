@@ -144,6 +144,31 @@ public enum AuthError: Error, Sendable {
     case configurationError(String)
 }
 
+extension AuthError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .notAuthenticated:
+            return "You are not signed in."
+        case .tokenExpired:
+            return "Your session has expired. Please sign in again."
+        case .tokenRefreshFailed:
+            return "Failed to refresh your session."
+        case .invalidResponse:
+            return "Received an invalid response from the authentication service."
+        case .networkError(let message):
+            return message
+        case .biometricFailed(let message):
+            return message
+        case .keychainError(let message):
+            return message
+        case .userCancelled:
+            return "Authentication was cancelled."
+        case .configurationError(let message):
+            return message
+        }
+    }
+}
+
 // MARK: - String Extension
 
 private extension String {

@@ -12,6 +12,7 @@ public final class WorkOSAuthController: NSObject, Sendable {
     private actor AuthState {
         var session: ASWebAuthenticationSession?
         var pkce: PKCE?
+        var oauthState: String?
         var continuation: CheckedContinuation<AuthResult, Error>?
 
         func setSession(_ session: ASWebAuthenticationSession?) {
@@ -22,12 +23,20 @@ public final class WorkOSAuthController: NSObject, Sendable {
             self.pkce = pkce
         }
 
+        func setOAuthState(_ state: String?) {
+            self.oauthState = state
+        }
+
         func setContinuation(_ cont: CheckedContinuation<AuthResult, Error>?) {
             self.continuation = cont
         }
 
         func getPKCE() -> PKCE? {
             pkce
+        }
+
+        func getOAuthState() -> String? {
+            oauthState
         }
 
         func getContinuation() -> CheckedContinuation<AuthResult, Error>? {
@@ -37,6 +46,7 @@ public final class WorkOSAuthController: NSObject, Sendable {
         func cancel() {
             session?.cancel()
             session = nil
+            oauthState = nil
             continuation?.resume(throwing: AuthError.userCancelled)
             continuation = nil
         }
@@ -53,16 +63,23 @@ public final class WorkOSAuthController: NSObject, Sendable {
 
     /// Start the OAuth sign-in flow.
     @MainActor
-    public func signIn() async throws -> AuthResult {
+    public func signIn(forceAccountSelection: Bool = false) async throws -> AuthResult {
         let pkce = PKCE.generate()
+        let state = UUID().uuidString.lowercased()
         await authState.setPKCE(pkce)
+        await authState.setOAuthState(state)
 
-        guard let authUrl = configuration.authorizationUrl(pkce: pkce) else {
+        guard let authUrl = configuration.authorizationUrl(
+            pkce: pkce,
+            state: state,
+            prompt: forceAccountSelection ? "select_account" : nil,
+            maxAge: forceAccountSelection ? 0 : nil
+        ) else {
             throw AuthError.configurationError("Invalid authorization URL")
         }
 
-        print("[WorkOS] Starting auth with URL: \(authUrl)")
-        print("[WorkOS] Callback scheme: \(configuration.callbackScheme)")
+        WorkOSLogger.log("[WorkOS] Starting auth with URL: \(authUrl)")
+        WorkOSLogger.log("[WorkOS] Callback scheme: \(configuration.callbackScheme)")
 
         return try await withCheckedThrowingContinuation { continuation in
             let session = ASWebAuthenticationSession(
@@ -70,13 +87,13 @@ public final class WorkOSAuthController: NSObject, Sendable {
                 callbackURLScheme: configuration.callbackScheme
             ) { [weak self] callbackURL, error in
                 guard let self = self else {
-                    print("[WorkOS] Self was nil in callback")
+                    WorkOSLogger.log("[WorkOS] Self was nil in callback")
                     return
                 }
 
                 Task {
                     if let error = error {
-                        print("[WorkOS] Auth session error: \(error)")
+                        WorkOSLogger.log("[WorkOS] Auth session error: \(error)")
                         if let authError = error as? ASWebAuthenticationSessionError {
                             if authError.code == .canceledLogin {
                                 continuation.resume(throwing: AuthError.userCancelled)
@@ -90,19 +107,19 @@ public final class WorkOSAuthController: NSObject, Sendable {
                     }
 
                     guard let callbackURL = callbackURL else {
-                        print("[WorkOS] No callback URL received")
+                        WorkOSLogger.log("[WorkOS] No callback URL received")
                         continuation.resume(throwing: AuthError.invalidResponse)
                         return
                     }
 
-                    print("[WorkOS] Received callback URL: \(callbackURL)")
+                    WorkOSLogger.log("[WorkOS] Received callback URL: \(callbackURL)")
 
                     do {
                         let result = try await self.handleCallback(callbackURL)
-                        print("[WorkOS] Token exchange successful")
+                        WorkOSLogger.log("[WorkOS] Token exchange successful")
                         continuation.resume(returning: result)
                     } catch {
-                        print("[WorkOS] Token exchange failed: \(error)")
+                        WorkOSLogger.log("[WorkOS] Token exchange failed: \(error)")
                         continuation.resume(throwing: error)
                     }
                 }
@@ -110,9 +127,7 @@ public final class WorkOSAuthController: NSObject, Sendable {
 
             session.presentationContextProvider = self
 
-            #if os(iOS)
-            session.prefersEphemeralWebBrowserSession = false
-            #endif
+            session.prefersEphemeralWebBrowserSession = forceAccountSelection
 
             Task {
                 await authState.setSession(session)
@@ -124,28 +139,41 @@ public final class WorkOSAuthController: NSObject, Sendable {
 
     /// Handle the OAuth callback URL.
     private func handleCallback(_ url: URL) async throws -> AuthResult {
-        print("[WorkOS] Handling callback: \(url)")
+        WorkOSLogger.log("[WorkOS] Handling callback: \(url)")
 
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-            print("[WorkOS] Failed to parse callback URL")
+            WorkOSLogger.log("[WorkOS] Failed to parse callback URL")
             throw AuthError.invalidResponse
         }
 
-        print("[WorkOS] Query items: \(components.queryItems ?? [])")
+        WorkOSLogger.log("[WorkOS] Query items: \(components.queryItems ?? [])")
+
+        let returnedState = components.queryItems?.first(where: { $0.name == "state" })?.value
+        let expectedState = await authState.getOAuthState()
 
         // Check for error in callback
         if let error = components.queryItems?.first(where: { $0.name == "error" })?.value {
             let errorDesc = components.queryItems?.first(where: { $0.name == "error_description" })?.value ?? "Unknown error"
-            print("[WorkOS] Auth error from WorkOS: \(error) - \(errorDesc)")
+            WorkOSLogger.log("[WorkOS] Auth error from WorkOS: \(error) - \(errorDesc)")
             throw AuthError.networkError("\(error): \(errorDesc)")
         }
 
-        guard let code = components.queryItems?.first(where: { $0.name == "code" })?.value else {
-            print("[WorkOS] No authorization code in callback")
+        guard let expectedState else {
+            WorkOSLogger.log("[WorkOS] Missing stored OAuth state")
+            throw AuthError.configurationError("OAuth state is not available")
+        }
+
+        guard let returnedState, returnedState == expectedState else {
+            WorkOSLogger.log("[WorkOS] OAuth state mismatch. expected=\(expectedState) returned=\(returnedState ?? "nil")")
             throw AuthError.invalidResponse
         }
 
-        print("[WorkOS] Got authorization code: \(code.prefix(10))...")
+        guard let code = components.queryItems?.first(where: { $0.name == "code" })?.value else {
+            WorkOSLogger.log("[WorkOS] No authorization code in callback")
+            throw AuthError.invalidResponse
+        }
+
+        WorkOSLogger.log("[WorkOS] Got authorization code: \(code.prefix(10))...")
 
         return try await exchangeCodeForTokens(code)
     }
@@ -169,26 +197,61 @@ public final class WorkOSAuthController: NSObject, Sendable {
             "grant_type": "authorization_code",
             "client_id": configuration.clientId,
             "code": code,
-            "code_verifier": pkce.verifier
+            "code_verifier": pkce.verifier,
+            "redirect_uri": configuration.redirectUri
         ]
 
         request.httpBody = try JSONSerialization.data(withJSONObject: bodyDict)
 
-        print("[WorkOS] Exchanging code at: \(tokenUrl)")
+        WorkOSLogger.log("[WorkOS] Exchanging code at: \(tokenUrl)")
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
         // Log raw response for debugging
         let rawResponse = String(data: data, encoding: .utf8) ?? "Unable to decode response"
-        print("[WorkOS] Raw response: \(rawResponse)")
+        WorkOSLogger.log("[WorkOS] Raw response: \(rawResponse)")
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw AuthError.networkError("Invalid response")
         }
 
         if !(200...299).contains(httpResponse.statusCode) {
-            print("[WorkOS] Token exchange failed (\(httpResponse.statusCode)): \(rawResponse)")
+            WorkOSLogger.log("[WorkOS] Token exchange failed (\(httpResponse.statusCode)): \(rawResponse)")
             throw AuthError.networkError("Token exchange failed (\(httpResponse.statusCode)): \(rawResponse)")
+        }
+
+        let tokenResponse = try JSONDecoder().decode(TokenResponse.self, from: data)
+        return AuthResult(tokens: tokenResponse.toAuthTokens(), userInfo: tokenResponse.toUserInfo())
+    }
+
+    // MARK: - Embedded Flow
+
+    /// Exchange an authorization code for tokens using an explicit PKCE verifier (for embedded WKWebView flows).
+    public func exchangeCode(_ code: String, pkce: PKCE) async throws -> AuthResult {
+        guard let tokenUrl = configuration.tokenUrl else {
+            throw AuthError.configurationError("Invalid token URL")
+        }
+
+        var request = URLRequest(url: tokenUrl)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let bodyDict: [String: Any] = [
+            "grant_type": "authorization_code",
+            "client_id": configuration.clientId,
+            "code": code,
+            "code_verifier": pkce.verifier,
+            "redirect_uri": configuration.redirectUri
+        ]
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: bodyDict)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            let body = String(data: data, encoding: .utf8) ?? "unknown error"
+            throw AuthError.networkError("Token exchange failed: \(body)")
         }
 
         let tokenResponse = try JSONDecoder().decode(TokenResponse.self, from: data)

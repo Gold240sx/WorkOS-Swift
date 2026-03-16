@@ -169,7 +169,7 @@ public struct RoleAssignmentView: View {
     public init(member: OrgMember, api: AdminAPI) {
         self.member = member
         self.api = api
-        _selectedRole = State(initialValue: member.roleId)
+        _selectedRole = State(initialValue: member.roleSlug)
     }
 
     public var body: some View {
@@ -185,7 +185,7 @@ public struct RoleAssignmentView: View {
                 } else {
                     Picker("Role", selection: $selectedRole) {
                         ForEach(roles) { role in
-                            Text(role.name.capitalized).tag(role.id)
+                            Text(role.name.capitalized).tag(role.slug)
                         }
                     }
                     .pickerStyle(.inline)
@@ -197,7 +197,7 @@ public struct RoleAssignmentView: View {
                     Button("Update Role") {
                         Task { await updateRole() }
                     }
-                    .disabled(selectedRole == member.roleId || isSaving)
+                    .disabled(selectedRole == member.roleSlug || isSaving)
                     .foregroundColor(theme.primaryColor)
                 }
             }

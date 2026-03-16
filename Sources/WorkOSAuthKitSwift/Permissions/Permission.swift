@@ -1,65 +1,95 @@
 import Foundation
 
 /// Permission types for role-based access control.
-public enum Permission: String, Codable, Hashable, CaseIterable, Sendable {
+public struct Permission: RawRepresentable, Codable, Hashable, Sendable, ExpressibleByStringLiteral, Identifiable {
+    public let rawValue: String
+
+    public var id: String { rawValue }
+
+    public init(rawValue: String) {
+        self.rawValue = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    public init(stringLiteral value: String) {
+        self.init(rawValue: value)
+    }
+
     // Organization permissions
-    case orgRead = "org:read"
-    case orgManage = "org:manage"
-    case orgDelete = "org:delete"
+    public static let orgRead = Permission(rawValue: "org:read")
+    public static let orgManage = Permission(rawValue: "org:manage")
+    public static let orgDelete = Permission(rawValue: "org:delete")
 
     // Member permissions
-    case membersRead = "members:read"
-    case membersInvite = "members:invite"
-    case membersRemove = "members:remove"
-    case membersManageRoles = "members:manage_roles"
+    public static let membersRead = Permission(rawValue: "members:read")
+    public static let membersInvite = Permission(rawValue: "members:invite")
+    public static let membersRemove = Permission(rawValue: "members:remove")
+    public static let membersManageRoles = Permission(rawValue: "members:manage_roles")
 
     // Billing permissions
-    case billingRead = "billing:read"
-    case billingManage = "billing:manage"
+    public static let billingRead = Permission(rawValue: "billing:read")
+    public static let billingManage = Permission(rawValue: "billing:manage")
 
     // Project permissions
-    case projectsCreate = "projects:create"
-    case projectsRead = "projects:read"
-    case projectsUpdate = "projects:update"
-    case projectsDelete = "projects:delete"
+    public static let projectsCreate = Permission(rawValue: "projects:create")
+    public static let projectsRead = Permission(rawValue: "projects:read")
+    public static let projectsUpdate = Permission(rawValue: "projects:update")
+    public static let projectsDelete = Permission(rawValue: "projects:delete")
 
     // Audit permissions
-    case auditRead = "audit:read"
+    public static let auditRead = Permission(rawValue: "audit:read")
+
+    public static let knownDefaults: [Permission] = [
+        .orgRead,
+        .orgManage,
+        .orgDelete,
+        .membersRead,
+        .membersInvite,
+        .membersRemove,
+        .membersManageRoles,
+        .billingRead,
+        .billingManage,
+        .projectsCreate,
+        .projectsRead,
+        .projectsUpdate,
+        .projectsDelete,
+        .auditRead
+    ]
 
     /// Human-readable display name.
     public var displayName: String {
-        switch self {
-        case .orgRead: return "View Organization"
-        case .orgManage: return "Manage Organization"
-        case .orgDelete: return "Delete Organization"
-        case .membersRead: return "View Members"
-        case .membersInvite: return "Invite Members"
-        case .membersRemove: return "Remove Members"
-        case .membersManageRoles: return "Manage Roles"
-        case .billingRead: return "View Billing"
-        case .billingManage: return "Manage Billing"
-        case .projectsCreate: return "Create Projects"
-        case .projectsRead: return "View Projects"
-        case .projectsUpdate: return "Update Projects"
-        case .projectsDelete: return "Delete Projects"
-        case .auditRead: return "View Audit Logs"
+        switch rawValue {
+        case Self.orgRead.rawValue: return "View Organization"
+        case Self.orgManage.rawValue: return "Manage Organization"
+        case Self.orgDelete.rawValue: return "Delete Organization"
+        case Self.membersRead.rawValue: return "View Members"
+        case Self.membersInvite.rawValue: return "Invite Members"
+        case Self.membersRemove.rawValue: return "Remove Members"
+        case Self.membersManageRoles.rawValue: return "Manage Roles"
+        case Self.billingRead.rawValue: return "View Billing"
+        case Self.billingManage.rawValue: return "Manage Billing"
+        case Self.projectsCreate.rawValue: return "Create Projects"
+        case Self.projectsRead.rawValue: return "View Projects"
+        case Self.projectsUpdate.rawValue: return "Update Projects"
+        case Self.projectsDelete.rawValue: return "Delete Projects"
+        case Self.auditRead.rawValue: return "View Audit Logs"
+        default:
+            return rawValue
+                .replacingOccurrences(of: ":", with: " ")
+                .replacingOccurrences(of: "_", with: " ")
+                .split(separator: " ")
+                .map { $0.capitalized }
+                .joined(separator: " ")
         }
     }
 
     /// Category for grouping in UI.
     public var category: String {
-        switch self {
-        case .orgRead, .orgManage, .orgDelete:
-            return "Organization"
-        case .membersRead, .membersInvite, .membersRemove, .membersManageRoles:
-            return "Members"
-        case .billingRead, .billingManage:
-            return "Billing"
-        case .projectsCreate, .projectsRead, .projectsUpdate, .projectsDelete:
-            return "Projects"
-        case .auditRead:
-            return "Audit"
+        if let prefix = rawValue.split(separator: ":").first {
+            return prefix
+                .replacingOccurrences(of: "_", with: " ")
+                .capitalized
         }
+        return "General"
     }
 }
 
