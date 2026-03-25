@@ -19,7 +19,8 @@ let package = Package(
         .target(
             name: "WorkOSAuthKitSwift",
             dependencies: [],
-            path: "Sources/WorkOSAuthKitSwift"
+            path: "Sources/WorkOSAuthKitSwift",
+            resources: [.process("Resources")]
         ),
         .testTarget(
             name: "WorkOSAuthKitSwiftTests",

@@ -125,7 +125,7 @@ public struct UserInfo: Codable, Sendable {
 }
 
 /// Authentication state.
-public enum AuthState: Sendable {
+public enum AuthState: Sendable, Equatable {
     case loading
     case authenticated
     case unauthenticated

@@ -77,6 +77,7 @@ public final class WorkOSAuthKit: Sendable {
         clientId: String,
         redirectUri: String,
         backendUrl: String? = nil,
+        workosApiKey: String? = nil,
         debugLogging: Bool = false,
         maxOfflineDuration: OfflineSessionDuration = .days(7)
     ) {
@@ -84,6 +85,7 @@ public final class WorkOSAuthKit: Sendable {
             clientId: clientId,
             redirectUri: redirectUri,
             backendUrl: backendUrl,
+            workosApiKey: workosApiKey,
             debugLogging: debugLogging,
             maxOfflineDuration: maxOfflineDuration
         )

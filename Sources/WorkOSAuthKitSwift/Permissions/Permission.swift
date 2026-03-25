@@ -35,6 +35,19 @@ public struct Permission: RawRepresentable, Codable, Hashable, Sendable, Express
     public static let projectsUpdate = Permission(rawValue: "projects:update")
     public static let projectsDelete = Permission(rawValue: "projects:delete")
 
+    // Social permissions
+    public static let socialPost = Permission(rawValue: "social:post")
+    public static let socialModerate = Permission(rawValue: "social:moderate")
+    public static let socialManageGroups = Permission(rawValue: "social:manage_groups")
+
+    // Content permissions
+    public static let contentModerate = Permission(rawValue: "content:moderate")
+    public static let contentManageTags = Permission(rawValue: "content:manage_tags")
+
+    // Store permissions
+    public static let storesCreate = Permission(rawValue: "stores:create")
+    public static let storesManage = Permission(rawValue: "stores:manage")
+
     // Audit permissions
     public static let auditRead = Permission(rawValue: "audit:read")
 
@@ -52,6 +65,13 @@ public struct Permission: RawRepresentable, Codable, Hashable, Sendable, Express
         .projectsRead,
         .projectsUpdate,
         .projectsDelete,
+        .socialPost,
+        .socialModerate,
+        .socialManageGroups,
+        .contentModerate,
+        .contentManageTags,
+        .storesCreate,
+        .storesManage,
         .auditRead
     ]
 
@@ -71,6 +91,13 @@ public struct Permission: RawRepresentable, Codable, Hashable, Sendable, Express
         case Self.projectsRead.rawValue: return "View Projects"
         case Self.projectsUpdate.rawValue: return "Update Projects"
         case Self.projectsDelete.rawValue: return "Delete Projects"
+        case Self.socialPost.rawValue: return "Create Posts"
+        case Self.socialModerate.rawValue: return "Moderate Social Content"
+        case Self.socialManageGroups.rawValue: return "Manage Groups"
+        case Self.contentModerate.rawValue: return "Moderate Content"
+        case Self.contentManageTags.rawValue: return "Manage Tags"
+        case Self.storesCreate.rawValue: return "Create Stores"
+        case Self.storesManage.rawValue: return "Manage Stores"
         case Self.auditRead.rawValue: return "View Audit Logs"
         default:
             return rawValue

@@ -38,6 +38,12 @@ public struct WorkOSConfiguration: Sendable {
     /// Your backend API base URL (for token verification).
     public var backendUrl: String?
 
+    /// Optional WorkOS secret API key (`sk_…`) to call WorkOS REST endpoints (Pipes / data integrations) from this process.
+    ///
+    /// Prefer proxying Pipes through your backend (`backendUrl`) so the key never ships in a client. Use this only for local
+    /// development or controlled internal builds.
+    public let workosApiKey: String?
+
     /// Whether to enable debug logging.
     public var debugLogging: Bool
 
@@ -48,6 +54,7 @@ public struct WorkOSConfiguration: Sendable {
         clientId: String,
         redirectUri: String,
         backendUrl: String? = nil,
+        workosApiKey: String? = nil,
         apiBaseUrl: String = "https://api.workos.com",
         debugLogging: Bool = false,
         maxOfflineDuration: OfflineSessionDuration = .days(7)
@@ -57,6 +64,7 @@ public struct WorkOSConfiguration: Sendable {
         self.callbackScheme = URL(string: redirectUri)?.scheme ?? "yourapp"
         self.apiBaseUrl = apiBaseUrl
         self.backendUrl = backendUrl
+        self.workosApiKey = workosApiKey
         self.debugLogging = debugLogging
         self.maxOfflineDuration = maxOfflineDuration.timeInterval
     }
@@ -66,6 +74,7 @@ public struct WorkOSConfiguration: Sendable {
         clientId: String,
         redirectUri: String,
         backendUrl: String? = nil,
+        workosApiKey: String? = nil,
         apiBaseUrl: String = "https://api.workos.com",
         debugLogging: Bool = false,
         maxOfflineDuration: TimeInterval
@@ -75,6 +84,7 @@ public struct WorkOSConfiguration: Sendable {
         self.callbackScheme = URL(string: redirectUri)?.scheme ?? "yourapp"
         self.apiBaseUrl = apiBaseUrl
         self.backendUrl = backendUrl
+        self.workosApiKey = workosApiKey
         self.debugLogging = debugLogging
         self.maxOfflineDuration = maxOfflineDuration
     }
@@ -134,6 +144,19 @@ public struct WorkOSConfiguration: Sendable {
 
         let normalizedBase = backendUrl.hasSuffix("/") ? String(backendUrl.dropLast()) : backendUrl
         var components = URLComponents(string: "\(normalizedBase)\(path)")
+        if !queryItems.isEmpty {
+            components?.queryItems = queryItems
+        }
+        return components?.url
+    }
+
+    /// Absolute URL on the WorkOS API host (e.g. `https://api.workos.com/user_management/...`).
+    public func workosRESTURL(path: String, queryItems: [URLQueryItem] = []) -> URL? {
+        let trimmedBase = apiBaseUrl.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedBase.isEmpty else { return nil }
+        let normalizedBase = trimmedBase.hasSuffix("/") ? String(trimmedBase.dropLast()) : trimmedBase
+        let normalizedPath = path.hasPrefix("/") ? path : "/\(path)"
+        var components = URLComponents(string: "\(normalizedBase)\(normalizedPath)")
         if !queryItems.isEmpty {
             components?.queryItems = queryItems
         }

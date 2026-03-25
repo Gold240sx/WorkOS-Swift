@@ -82,6 +82,47 @@ extension AuthStore {
         has(.auditRead)
     }
 
+    // MARK: - Project Convenience
+
+    /// Whether user can create projects.
+    public var canCreateProjects: Bool {
+        has(.projectsCreate)
+    }
+
+    /// Whether user can delete projects.
+    public var canDeleteProjects: Bool {
+        has(.projectsDelete)
+    }
+
+    // MARK: - Social Convenience
+
+    /// Whether user can create social posts.
+    public var canPost: Bool {
+        has(.socialPost)
+    }
+
+    /// Whether user can moderate social or general content.
+    public var canModerate: Bool {
+        hasAny(.socialModerate, .contentModerate)
+    }
+
+    /// Whether user can manage social groups.
+    public var canManageGroups: Bool {
+        has(.socialManageGroups)
+    }
+
+    // MARK: - Store Convenience
+
+    /// Whether user can create stores.
+    public var canCreateStores: Bool {
+        has(.storesCreate)
+    }
+
+    /// Whether user can manage stores.
+    public var canManageStores: Bool {
+        has(.storesManage)
+    }
+
     // MARK: - Conditional Execution
 
     /// Execute a closure only if user has permission.

@@ -47,6 +47,7 @@ public final class AuthStore: ObservableObject {
 
     public let rbacClient: RBACClient
     public let vaultClient: VaultClient
+    public let pipesClient: PipesClient
 
     // MARK: - Initialization
 
@@ -57,6 +58,7 @@ public final class AuthStore: ObservableObject {
         self.networkMonitor = NetworkMonitor()
         self.rbacClient = RBACClient(configuration: configuration)
         self.vaultClient = VaultClient(configuration: configuration)
+        self.pipesClient = PipesClient(configuration: configuration)
 
         networkMonitor.$isOnline
             .removeDuplicates()
@@ -78,6 +80,7 @@ public final class AuthStore: ObservableObject {
             guard let self else { return }
             await self.rbacClient.attach(authStore: self)
             await self.vaultClient.attach(authStore: self)
+            await self.pipesClient.attach(authStore: self)
         }
     }
 
