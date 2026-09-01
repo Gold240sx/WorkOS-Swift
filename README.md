@@ -7,7 +7,7 @@
 
 # WorkOS-Swift (WorkOSAuthKitSwift)
 
-**Version 1.0.0**
+**Version 1.1.0**
 
 A Swift package for [WorkOS](https://workos.com) AuthKit/User Management authentication in iOS and macOS apps (OAuth 2.0 PKCE via `ASWebAuthenticationSession`), with no external dependencies.
 
@@ -44,14 +44,14 @@ Add this package to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/Gold240sx/WorkOS-Swift.git", from: "1.0.0")
+    .package(url: "https://github.com/Gold240sx/WorkOS-Swift.git", from: "1.1.0")
 ]
 ```
 
 Or add it via Xcode:
 1. File > Add Package Dependencies
 2. Enter the package URL: `https://github.com/Gold240sx/WorkOS-Swift.git`
-3. Select version: `1.0.0` (or “Up to Next Major”)
+3. Select version: `1.1.0` (or “Up to Next Major”)
 
 ### Dependencies
 
@@ -503,6 +503,14 @@ http.route({
 ```
 
 ## Changelog
+
+### 1.1.0
+
+- WorkOS Pipes integration (`PipesClient`, `PipesModels`), including GitHub Pipes
+- RBAC client (`RBACClient`) with `AuthorizationSnapshot` and expanded permission model + hooks
+- `VaultClient` for WorkOS Vault
+- Hardened Keychain handling and richer token models
+- Structured logging (`WorkOSLogger`)
 
 ### 1.0.0 (Initial Release)
 

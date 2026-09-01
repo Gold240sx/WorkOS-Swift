@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.1.0
+
+Feature release. Backward compatible with v1.0.0.
+
+Highlights:
+- WorkOS Pipes integration (`PipesClient`, `PipesModels`) — including the GitHub Pipes flow
+- Role-based access control client (`RBACClient`) with an `AuthorizationSnapshot`, plus expanded permission model and hooks
+- `VaultClient` for WorkOS Vault
+- Hardened Keychain handling and richer token models (`SecureKeychain`, `TokenModels`)
+- Structured logging via `WorkOSLogger`
+
 ## v1.0.0
 
 Initial public release.
